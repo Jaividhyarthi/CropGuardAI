@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CropGuard AI — Field History</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/styles.css"/>
+  <style>
+    .wrap { max-width: 1000px; margin: 0 auto; padding: 40px; }
+    .page-title { font-family: var(--font-display); font-size: 1.9rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 4px; }
+    .page-title em { font-style: italic; color: var(--green-bright); }
+    .page-sub { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 32px; }
+    .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--text-muted); text-decoration: none; margin-bottom: 24px; border: 1px solid var(--border); padding: 6px 12px; border-radius: 20px; transition: all 0.15s; }
+    .back-link:hover { color: var(--green-bright); border-color: var(--green-dim); }
+    .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border-light); border-radius: 12px; padding: 18px; }
+    .stat-val { font-family: var(--font-display); font-size: 1.8rem; font-weight: 700; color: var(--green-bright); letter-spacing: -0.03em; margin-bottom: 4px; }
+    .stat-lbl { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); }
+    .table-wrap { background: var(--surface); border: 1px solid var(--border-light); border-radius: 14px; overflow: hidden; }
+    .table-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 22px; border-bottom: 1px solid var(--border); }
+    .table-title { font-size: 0.62rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); }
+    .clear-btn { font-size: 0.7rem; color: var(--red); background: none; border: 1px solid rgba(160,64,64,0.3); border-radius: 6px; padding: 5px 12px; cursor: pointer; font-family: var(--font-body); transition: all 0.15s; }
+    .clear-btn:hover { background: rgba(160,64,64,0.1); }
+    table { width: 100%; border-collapse: collapse; }
+    thead th { text-align: left; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--surface-2); }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.12s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface-2); }
+    tbody td { padding: 11px 16px; font-size: 0.78rem; color: var(--text-muted); }
+    .empty-msg { text-align: center; padding: 48px; color: var(--text-dim); font-size: 0.82rem; }
+    .sev-pill { font-size: 0.62rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; letter-spacing: 0.06em; text-transform: uppercase; }
+    @media (max-width: 700px) { .stats-grid { grid-template-columns: 1fr 1fr; } .wrap { padding: 24px; } }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div class="logo">
+      <div class="logo-leaf">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+          <path d="M12 2a10 10 0 0 1 10 10c0 5.52-4.48 10-10 10S2 17.52 2 12c0-2.76 1.12-5.26 2.93-7.07"/>
+          <path d="M12 2v20M2 12h20"/>
+        </svg>
+      </div>
+      <span class="logo-text">CropGuard <em>AI</em></span>
+    </div>
+    <a href="/" class="nav-btn">← Back to Detector</a>
+  </header>
+
+  <div class="wrap">
+    <a href="/" class="back-link">← Back to Detector</a>
+    <div class="page-title">Field <em>History</em></div>
+    <div class="page-sub">All past disease detections stored in the local database.</div>
+
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-val" id="sTotal">—</div><div class="stat-lbl">Total Scans</div></div>
+      <div class="stat-card"><div class="stat-val" id="sHealthy" style="color:#4a9a4a">—</div><div class="stat-lbl">Healthy</div></div>
+      <div class="stat-card"><div class="stat-val" id="sDiseased" style="color:#a04040">—</div><div class="stat-lbl">Diseased</div></div>
+      <div class="stat-card"><div class="stat-val" id="sCritical" style="color:#8b1a1a">—</div><div class="stat-lbl">Critical</div></div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-head">
+        <div class="table-title">Detection Records</div>
+        <button class="clear-btn" onclick="clearAll()">Clear All</button>
+      </div>
+      <div id="tableContent"><div class="empty-msg">Loading...</div></div>
+    </div>
+  </div>
+
+  <footer style="padding:16px 40px; border-top:1px solid var(--border); font-size:0.65rem; color:var(--text-dim); text-align:center;">
+    CropGuard AI · MobileNetV2 · PlantVillage · 38 Disease Classes
+  </footer>
+</div>
+
+<script>
+const SEV_COLORS = { None:'#4a9a4a', Medium:'#c4822a', High:'#a04040', Critical:'#8b1a1a', Unknown:'#4a6a4a' };
+
+async function loadData() {
+  try {
+    const [histRes, statsRes] = await Promise.all([fetch('/api/history'), fetch('/api/stats')]);
+    const hist = await histRes.json();
+    const stats = await statsRes.json();
+    renderStats(stats);
+    renderTable(hist);
+  } catch(e) {
+    document.getElementById('tableContent').innerHTML = '<div class="empty-msg">Could not load data.</div>';
+  }
+}
+
+function renderStats(s) {
+  document.getElementById('sTotal').textContent = s.total;
+  const healthy = s.severity_dist?.None || 0;
+  const critical = s.severity_dist?.Critical || 0;
+  const diseased = s.total - healthy;
+  document.getElementById('sHealthy').textContent = healthy;
+  document.getElementById('sDiseased').textContent = diseased;
+  document.getElementById('sCritical').textContent = critical;
+}
+
+function renderTable(history) {
+  if (!history.length) {
+    document.getElementById('tableContent').innerHTML = '<div class="empty-msg">No detections yet. Go scan some leaves!</div>';
+    return;
+  }
+
+  const rows = history.map(r => {
+    const color = SEV_COLORS[r.severity] || SEV_COLORS.Unknown;
+    const sev = r.severity === 'None' ? 'Healthy' : r.severity;
+    return `<tr>
+      <td style="color:var(--text-dim); font-size:0.68rem">${r.timestamp}</td>
+      <td style="color:var(--text); font-weight:500">${r.disease}</td>
+      <td>${r.crop}</td>
+      <td><span class="sev-pill" style="background:${color}22; color:${color}; border:1px solid ${color}44">${sev}</span></td>
+      <td style="color:var(--green-bright); font-weight:600">${r.confidence}%</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('tableContent').innerHTML = `
+    <table>
+      <thead><tr><th>Timestamp</th><th>Disease</th><th>Crop</th><th>Severity</th><th>Confidence</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+async function clearAll() {
+  if (!confirm('Delete all detection history?')) return;
+  await fetch('/api/clear', { method: 'DELETE' });
+  loadData();
+}
+
+loadData();
+</script>
+</body>
+</html>
